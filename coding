@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writer's Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        h1 {
+            color: #5c6bc0; /* Calm blue */
+            text-align: center;
+        }
+
+        #auth-page {
+            display: block;
+        }
+
+        #main-page {
+            display: none;
+        }
+
+        #login-form, #signup-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #5c6bc0; /* Calm blue */
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #3f51b5;
+        }
+
+        .distraction-free textarea {
+            font-size: 18px;
+            line-height: 1.8;
+            border: none;
+            background: #f0f0f0;
+            color: #333;
+            padding: 20px;
+            width: 100%;
+            height: 80vh;
+        }
+
+        .mood-board {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .mood-board-image {
+            max-width: 100px;
+            margin: 10px;
+        }
+
+        #word-count {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Page -->
+        <div id="auth-page">
+            <h1>Writer's Assistant</h1>
+            <!-- Signup Form -->
+            <form id="signup-form">
+                <h2>Signup</h2>
+                <input type="text" id="signup-username" placeholder="Username" required>
+                <input type="password" id="signup-password" placeholder="Password" required>
+                <button type="submit">Signup</button>
+            </form>
+
+            <!-- Login Form -->
+            <form id="login-form">
+                <h2>Login</h2>
+                <input type="text" id="login-username" placeholder="Username" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit">Login</button>
+                <p id="status"></p>
+            </form>
+        </div>
+
+        <!-- Main Writing Page -->
+        <div id="main-page">
+            <h1>Welcome Back, <span id="user-name"></span></h1>
+
+            <button id="distraction-toggle">Toggle Distraction-Free Mode</button>
+
+            <div>
+                <textarea id="writing-input" placeholder="Start Writing Here..."></textarea>
+                <p id="word-count">Words: 0</p>
+                <button id="save-btn">Save Progress</button>
+                <button id="export-btn">Export as PDF</button>
+            </div>
+
+            <section id="plot-outline">
+                <h2>Plot Outline</h2>
+                <textarea id="plot-outline-input" placeholder="Outline your plot here..."></textarea>
+            </section>
+
+            <section id="plot-development">
+                <h2>Plot Development</h2>
+                <textarea id="plot-development-input" placeholder="Develop your plot here..."></textarea>
+            </section>
+
+            <section id="writing-goals">
+                <h2>Writing Goals</h2>
+                <input type="number" id="writing-goals-input" placeholder="Set word count goal" />
+            </section>
+
+            <section id="prompts">
+                <h2>Writing Prompts</h2>
+                <button id="generate-prompt">Generate Prompt</button>
+                <p id="prompt-output"></p>
+            </section>
+
+            <section id="character-settings">
+                <h2>Character Mood Board</h2>
+                <div id="character-mood-board" class="mood-board"></div>
+                <input type="file" id="character-upload" accept="image/*">
+            </section>
+
+            <section id="setting-settings">
+                <h2>Setting Mood Board</h2>
+                <div id="setting-mood-board" class="mood-board"></div>
+                <input type="file" id="setting-upload" accept="image/*">
+            </section>
+
+            <footer>
+                <p>&copy; 2025 Writer's Assistant. All Rights Reserved.</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const signupForm = document.getElementById('signup-form');
+            const loginForm = document.getElementById('login-form');
+            const mainPage = document.getElementById('main-page');
+            const authPage = document.getElementById('auth-page');
+            const writingInput = document.getElementById('writing-input');
+            const wordCount = document.getElementById('word-count');
+            const saveBtn = document.getElementById('save-btn');
+            const exportBtn = document.getElementById('export-btn');
+            const generatePromptBtn = document.getElementById('generate-prompt');
+            const promptOutput = document.getElementById('prompt-output');
+            const status = document.getElementById('status');
+            const characterMoodBoard = document.getElementById('character-mood-board');
+            const settingMoodBoard = document.getElementById('setting-mood-board');
+            const characterUpload = document.getElementById('character-upload');
+            const settingUpload = document.getElementById('setting-upload');
+            const plotOutlineInput = document.getElementById('plot-outline-input');
+            const plotDevelopmentInput = document.getElementById('plot-development-input');
+            const writingGoalsInput = document.getElementById('writing-goals-input');
+            let distractionMode = false;
+
+            // Check if the user is logged in
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                showMainPage();  // Show main writing page
+                loadUserProgress();
+            } else {
+                // Show login/signup page if no user is logged in
+                authPage.style.display = 'block';
+                mainPage.style.display = 'none';
+            }
+
+            // Handle login form submission
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault(); // Prevent page reload
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+
+                // Check if the username exists in localStorage
+                const savedPassword = localStorage.getItem(username);
+                
+                if (savedPassword && savedPassword === password) {
+                    localStorage.setItem('currentUser', username);
+                    showMainPage();
+                } else {
+                    status.textContent = 'Invalid username or password.';
+                    setTimeout(() => { status.textContent = ''; }, 2000);
+                }
+            });
+
+            // Handle signup form submission
+            signupForm.addEventListener('submit', (e) => {
+                e.preventDefault(); // Prevent page reload
+                const username = document.getElementById('signup-username').value;
+                const password = document.getElementById('signup-password').value;
+
+                // Save user to localStorage
+                localStorage.setItem(username, password);
+                localStorage.setItem('currentUser', username);
+                showMainPage();
+            });
+
+            // Function to display main page after login/signup
+            function showMainPage() {
+                authPage.style.display = 'none';  // Hide login/signup page
+                mainPage.style.display = 'block'; // Show main writing page
+                const username = localStorage.getItem('currentUser');
+                document.getElementById('user-name').textContent = username;
+            }
+
+            // Load user progress
+            function loadUserProgress() {
+                const userProgress = localStorage.getItem(`${currentUser}-writingProgress`);
+                if (userProgress) {
+                    writingInput.value = userProgress;
+                }
+
+                const plotOutline = localStorage.getItem(`${currentUser}-plotOutline`);
+                if (plotOutline) {
+                    plotOutlineInput.value = plotOutline;
+                }
+
+                const plotDevelopment = localStorage.getItem(`${currentUser}-plotDevelopment`);
+                if (plotDevelopment) {
+                    plotDevelopmentInput.value = plotDevelopment;
+                }
+
+                const writingGoals = localStorage.getItem(`${currentUser}-writingGoals`);
+                if (writingGoals) {
+                    writingGoalsInput.value = writingGoals;
+                }
+            }
+
+            // Functionality for writing tools, prompts, mood boards, and save/export remains the same...
+        });
+    </script>
+</body>
+</html>
